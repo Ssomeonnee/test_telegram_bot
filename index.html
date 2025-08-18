@@ -168,180 +168,118 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Получаем параметры из URL
+        // Проверяем, открыто ли в Telegram WebApp
+        if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.expand();
+            
+            // Получаем данные из WebApp
+            const initData = Telegram.WebApp.initData;
+            const initDataUnsafe = Telegram.WebApp.initDataUnsafe;
+            const user = initDataUnsafe.user;
+            
+            // Загружаем данные графика
+            loadScheduleData(user.id);
+        } else {
+            // Режим разработки (если открыто напрямую в браузере)
             const urlParams = new URLSearchParams(window.location.search);
-            const scheduleId = urlParams.get('schedule_id');
-            const month = urlParams.get('month');
-            const year = urlParams.get('year');
-            const daysInMonth = parseInt(urlParams.get('days'));
-            const employees = urlParams.get('employees').split(',');
-           
+            const testUserId = urlParams.get('user_id');
+            if (testUserId) {
+                loadScheduleData(testUserId);
+            }
+        }
+    });
+    
+    async function loadScheduleData(userId) {
+        try {
+            // Здесь должен быть запрос к API вашего бота
+            // Но так как GitHub Pages не поддерживает бэкенд,
+            // используем localStorage для демонстрации
+            
+            // Заглушка для теста
+            const month = "Сентябрь";
+            const year = 2023;
+            const daysInMonth = 30;
+            const employees = ["Иванов Иван", "Петров Петр", "Сидоров Алексей"];
+            
             // Обновляем заголовок
             document.querySelector('.header h5').textContent = `График на ${month} ${year}`;
             
-            // Формируем заголовки дней
-            const dayHeaders = ['Фамилия'];
+            // Создаем таблицу
+            createScheduleTable(employees, daysInMonth);
+            
+        } catch (error) {
+            console.error("Ошибка загрузки данных:", error);
+        }
+    }
+    
+    function createScheduleTable(employees, daysInMonth) {
+        const tableHeader = document.getElementById('table-header');
+        const tableBody = document.getElementById('table-body');
+        
+        // Очищаем таблицу
+        tableHeader.innerHTML = '';
+        tableBody.innerHTML = '';
+        
+        // Создаем заголовок с днями месяца
+        const headerRow = document.createElement('tr');
+        const nameTh = document.createElement('th');
+        nameTh.textContent = 'Фамилия';
+        headerRow.appendChild(nameTh);
+        
+        for (let day = 1; day <= daysInMonth; day++) {
+            const th = document.createElement('th');
+            th.textContent = day;
+            headerRow.appendChild(th);
+        }
+        
+        tableHeader.appendChild(headerRow);
+        
+        // Создаем строки для сотрудников
+        employees.forEach(employee => {
+            const row = document.createElement('tr');
+            const nameTd = document.createElement('td');
+            nameTd.textContent = employee;
+            row.appendChild(nameTd);
+            
             for (let day = 1; day <= daysInMonth; day++) {
-                dayHeaders.push(day.toString());
+                const td = document.createElement('td');
+                td.classList.add('editable-cell');
+                td.setAttribute('contenteditable', 'true');
+                td.addEventListener('click', handleCellClick);
+                row.appendChild(td);
             }
             
-            // Конфигурация таблицы
-            const config = {
-                rowsCount: employees.length,
-                colsCount: daysInMonth,
-                fixedColumnData: employees,
-                mainHeaderData: dayHeaders
-            };
-            
-            // Создаем заголовок таблицы
-            const tableHeader = document.getElementById('table-header');
-            config.mainHeaderData.forEach(item => {
-                const th = document.createElement('th');
-                th.textContent = item;
-                tableHeader.appendChild(th);
-            });
-            
-            // Создаем тело таблицы
-            const tableBody = document.getElementById('table-body');
-            for (let i = 0; i < config.rowsCount; i++) {
-                const row = document.createElement('tr');
-                
-                // Первая ячейка (фамилия)
-                const fixedTd = document.createElement('td');
-                fixedTd.textContent = config.fixedColumnData[i];
-                row.appendChild(fixedTd);
-                
-                // Остальные ячейки (дни месяца)
-                for (let j = 1; j <= config.colsCount; j++) {
-                    const td = document.createElement('td');
-                    td.textContent = ''; // Пустые ячейки по умолчанию
-                    td.classList.add('editable-cell');
-                    td.setAttribute('contenteditable', 'true');
-                    row.appendChild(td);
-                }
-                
-                tableBody.appendChild(row);
-            }
-        
-            // Функция для сохранения данных
-            function saveTableData() {
-                const data = [];
-                document.querySelectorAll('#table-body tr').forEach(row => {
-                    const rowData = [];
-                    row.querySelectorAll('td').forEach(cell => {
-                        rowData.push(cell.textContent);
-                    });
-                    data.push(rowData);
-                });
-                localStorage.setItem('tableData', JSON.stringify(data));
-            }
-            
-            // Автосохранение при изменении
-            document.querySelectorAll('.editable-cell').forEach(cell => {
-                cell.addEventListener('input', saveTableData);
-            });
-            
-            // Загружаем данные при старте
-            loadScheduleData(scheduleId)
-            
-            // Оптимизация для touch-устройств
-            if ('ontouchstart' in window) {
-                // Добавляем highlight при касании
-                document.querySelectorAll('.main-table tr').forEach(row => {
-                    row.addEventListener('touchstart', function() {
-                        document.querySelectorAll('.main-table tr').forEach(r => {
-                            r.classList.remove('highlight');
-                        });
-                        this.classList.add('highlight');
-                    });
-                });
-                
-                // Улучшаем производительность прокрутки
-                document.querySelectorAll('.main-table td, .main-table th').forEach(el => {
-                    el.style.touchAction = 'manipulation';
-                    el.style.webkitBackfaceVisibility = 'hidden';
-                });
-                
-                // Принудительный рефреш после загрузки
-                setTimeout(() => {
-                    const container = document.querySelector('.table-container');
-                    container.style.overflow = 'hidden';
-                    setTimeout(() => {
-                        container.style.overflow = 'auto';
-                    }, 50);
-                }, 200);
-                
-                // Оптимизация для редактирования на мобильных
-                document.querySelectorAll('.editable-cell').forEach(cell => {
-                    cell.addEventListener('touchstart', function(e) {
-                        if (e.touches.length === 1) {
-                            this.focus();
-                            window.getSelection().selectAllChildren(this);
-                        }
-                    }, {passive: true});
-                });
-            }
-
-
-
-
-            async function loadScheduleData(scheduleId) {
-                try {
-                    // Здесь можно добавить загрузку сохраненных данных графика
-                    // Например, через API вашего бота:
-                    // const response = await fetch(`/api/schedule/${scheduleId}`);
-                    // const data = await response.json();
-                    // заполнить таблицу данными из data
-                    
-                    // Пока просто загружаем из localStorage
-                    const savedData = localStorage.getItem(`schedule_${scheduleId}`);
-                    if (savedData) {
-                        const data = JSON.parse(savedData);
-                        const rows = document.querySelectorAll('#table-body tr');
-                        data.forEach((rowData, rowIndex) => {
-                            if (rows[rowIndex]) {
-                                const cells = rows[rowIndex].querySelectorAll('td');
-                                rowData.forEach((cellData, cellIndex) => {
-                                    if (cells[cellIndex]) {
-                                        cells[cellIndex].textContent = cellData;
-                                    }
-                                });
-                            }
-                        });
-                    }
-                } catch (error) {
-                    console.error("Ошибка загрузки данных:", error);
-                }
-            }
-            
-            function saveScheduleData(scheduleId) {
-                const data = [];
-                document.querySelectorAll('#table-body tr').forEach(row => {
-                    const rowData = [];
-                    row.querySelectorAll('td').forEach(cell => {
-                        rowData.push(cell.textContent);
-                    });
-                    data.push(rowData);
-                });
-                localStorage.setItem(`schedule_${scheduleId}`, JSON.stringify(data));
-                
-                // Здесь можно добавить отправку данных на сервер
-                // fetch(`/api/schedule/${scheduleId}`, {
-                //     method: 'POST',
-                //     body: JSON.stringify(data)
-                // });
-            }
-            
-            // Автосохранение при изменении
-            document.addEventListener('input', function(e) {
-                if (e.target.classList.contains('editable-cell')) {
-                    const scheduleId = new URLSearchParams(window.location.search).get('schedule_id');
-                    saveScheduleData(scheduleId);
-                }
-            });
+            tableBody.appendChild(row);
         });
-
+    }
+    
+    function handleCellClick(e) {
+        const cell = e.target;
+        const currentText = cell.textContent.trim();
+        const newText = prompt("Введите название дежурства:", currentText || "Дежурство");
         
+        if (newText !== null) { // Пользователь не нажал "Отмена"
+            cell.textContent = newText;
+            cell.style.backgroundColor = newText ? '#e6f7ff' : '';
+            
+            // Здесь можно сохранить данные в localStorage
+            saveToLocalStorage();
+        }
+    }
+    
+    function saveToLocalStorage() {
+        // Сохранение данных в localStorage
+        const data = [];
+        document.querySelectorAll('#table-body tr').forEach(row => {
+            const rowData = [];
+            row.querySelectorAll('td').forEach(cell => {
+                rowData.push(cell.textContent);
+            });
+            data.push(rowData);
+        });
+        localStorage.setItem('schedule_data', JSON.stringify(data));
+    }
     </script>
 </body>
 </html>
+

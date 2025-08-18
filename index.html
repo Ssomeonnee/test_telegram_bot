@@ -174,10 +174,8 @@
             const month = urlParams.get('month');
             const year = urlParams.get('year');
             const daysInMonth = parseInt(urlParams.get('days'));
-            //const employees = urlParams.get('employees').split(',');
-            const employees = JSON.parse(decodeURIComponent(urlParams.get('employees')));
-            const duties = JSON.parse(decodeURIComponent(urlParams.get('duties') || '[]'));
-            
+            const employees = urlParams.get('employees').split(',');
+           
             // Обновляем заголовок
             document.querySelector('.header h5').textContent = `График на ${month} ${year}`;
             
@@ -204,40 +202,26 @@
             });
             
             // Создаем тело таблицы
-            // Заполняем таблицу с дежурствами
             const tableBody = document.getElementById('table-body');
-            employees.forEach(employee => {
+            for (let i = 0; i < config.rowsCount; i++) {
                 const row = document.createElement('tr');
                 
-                // Ячейка с именем сотрудника
-                const nameTd = document.createElement('td');
-                nameTd.textContent = employee.name;
-                row.appendChild(nameTd);
+                // Первая ячейка (фамилия)
+                const fixedTd = document.createElement('td');
+                fixedTd.textContent = config.fixedColumnData[i];
+                row.appendChild(fixedTd);
                 
-                // Ячейки с днями месяца
-                for (let day = 1; day <= daysInMonth; day++) {
+                // Остальные ячейки (дни месяца)
+                for (let j = 1; j <= config.colsCount; j++) {
                     const td = document.createElement('td');
-                    const duty = duties.find(d => d.employee_id == employee.id && d.day == day);
-                    
-                    if (duty) {
-                        td.textContent = duty.place;
-                        td.style.backgroundColor = '#e6f7ff';
-                    }
-                    
-                    td.addEventListener('click', () => {
-                        const newTitle = prompt("Введите название дежурства:", duty?.title || 'Дежурство');
-                        if (newTitle !== null) {
-                            td.textContent = newTitle;
-                            td.style.backgroundColor = '#e6f7ff';
-                            saveDuty(scheduleId, employee.id, day, newTitle);
-                        }
-                    });
-                    
+                    td.textContent = ''; // Пустые ячейки по умолчанию
+                    td.classList.add('editable-cell');
+                    td.setAttribute('contenteditable', 'true');
                     row.appendChild(td);
                 }
                 
                 tableBody.appendChild(row);
-            });
+            }
         
             // Функция для сохранения данных
             function saveTableData() {
@@ -361,4 +345,3 @@
     </script>
 </body>
 </html>
-

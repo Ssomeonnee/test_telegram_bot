@@ -220,7 +220,7 @@
                     const duty = duties.find(d => d.employee_id == employee.id && d.day == day);
                     
                     if (duty) {
-                        td.textContent = duty.title;
+                        td.textContent = duty.place;
                         td.style.backgroundColor = '#e6f7ff';
                     }
                     
@@ -361,3 +361,4 @@
     </script>
 </body>
 </html>
+

@@ -311,8 +311,9 @@
 
         if (encodedData) {
             try {
-                const decodedData = atob(decodeURIComponent(encodedData)); // Декодируем Base64
+                const decodedData = atob(encodedData);
                 const webAppData = JSON.parse(decodedData);
+
 
                 const scheduleId = webAppData.schedule_id;
                 const month = webAppData.month;
@@ -414,3 +415,4 @@
 </script>
 </body>
 </html>
+

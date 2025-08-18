@@ -453,41 +453,28 @@
             console.log("Sending data:", dataToSend);
 
             function sendDataToBot() {
-    const currentData = collectTableData();
-    const changes = findChanges(originalData, currentData);
+            const currentData = collectTableData();
+            const changes = findChanges(originalData, currentData);
+        
+            const dataToSend = {
+                schedule_id: config.scheduleId,
+                changes: changes,
+                full_data: currentData.duties
+            };
+        
+            console.log("Sending data:", dataToSend);  // Лог перед отправкой
 
-    const dataToSend = {
-        schedule_id: config.scheduleId,
-        changes: changes,
-        full_data: currentData.duties
-    };
-
-    console.log("Sending data:", dataToSend);  // Лог перед отправкой
-
-    try {
-            if (window.Telegram && Telegram.WebApp && typeof Telegram.WebApp.sendData === 'function' && typeof Telegram.WebApp.close === 'function') {
+            if (window.Telegram && Telegram.WebApp) {
                 Telegram.WebApp.sendData(JSON.stringify(dataToSend));
                 Telegram.WebApp.close();
-                console.log("Data sent to Telegram WebApp"); // Лог после успешной отправки
             } else {
-                alert('Telegram WebApp не найден. Данные подготовлены для отправки:\n' + JSON.stringify(dataToSend, null, 2));
+                alert('Данные подготовлены для отправки:\n' + JSON.stringify(dataToSend, null, 2));
             }
-        } catch (e) {
-            console.error("Error sending data to Telegram:", e);
-            alert("Произошла ошибка при отправке данных в Telegram: " + e.message);
-        }
-    
-            
-            //if (window.Telegram && Telegram.WebApp) {
-                //Telegram.WebApp.sendData(JSON.stringify(dataToSend));
-                //Telegram.WebApp.close();
-            //} else {
-              //  alert('Данные подготовлены для отправки:\n' + JSON.stringify(dataToSend, null, 2));
-            //}
         }
     </script>
 </body>
 </html>
+
 
 
 

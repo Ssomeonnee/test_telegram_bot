@@ -451,14 +451,18 @@
             };
             
             console.log("Sending data:", dataToSend);
+
+            Telegram.WebApp.sendData(JSON.stringify(dataToSend));
+            Telegram.WebApp.close();
             
-            if (window.Telegram && Telegram.WebApp) {
-                Telegram.WebApp.sendData(JSON.stringify(dataToSend));
-                Telegram.WebApp.close();
-            } else {
-                alert('Данные подготовлены для отправки:\n' + JSON.stringify(dataToSend, null, 2));
-            }
+            //if (window.Telegram && Telegram.WebApp) {
+                //Telegram.WebApp.sendData(JSON.stringify(dataToSend));
+                //Telegram.WebApp.close();
+            //} else {
+              //  alert('Данные подготовлены для отправки:\n' + JSON.stringify(dataToSend, null, 2));
+            //}
         }
     </script>
 </body>
 </html>
+

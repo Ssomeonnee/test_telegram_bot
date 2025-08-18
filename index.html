@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Таблица с закрепленным столбцом</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            overflow-x: auto;
+            touch-action: manipulation;
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        .header {
+            background-color: #f8f9fa;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .table-container {
+            overflow: auto;
+            height: calc(100vh - 100px);
+            -webkit-overflow-scrolling: touch;
+            background-color: white;
+        }
+        
+        .main-table {
+            table-layout: fixed;
+            width: auto;
+            min-width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .main-table th,
+        .main-table td {
+            border: 1px solid #dee2e6 !important;
+            font-size: 14px;
+            padding: 6px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background-color: white;
+            position: relative;
+        }
+        
+        /* Закрепленный столбец с фамилиями */
+        .main-table th:first-child,
+        .main-table td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 12;
+            width: 100px;
+            min-width: 100px;
+            max-width: 100px;
+            background-color: #f1f8ff;
+            border-right: 2px solid #b3d1ff !important;
+        }
+        
+        /* Закрепленный заголовок первого столбца */
+        .main-table th:first-child {
+            z-index: 22;
+            top: 0;
+        }
+        
+        /* Остальные ячейки */
+        .main-table th:not(:first-child),
+        .main-table td:not(:first-child) {
+            width: 40px;
+            min-width: 40px;
+            max-width: 40px;
+        }
+        
+        /* Заголовки */
+        .main-table th {
+            background-color: #f8f9fa;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        
+        /* Hover эффект для строк - переделан для мобильных */
+        .main-table tbody tr {
+            transition: background-color 0.1s;
+        }
+        .main-table tbody tr:hover td,
+        .main-table tbody tr.highlight td {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        .main-table tbody tr:hover td:first-child,
+        .main-table tbody tr.highlight td:first-child {
+            background-color: #e1f0ff;
+        }
+        
+        /* Гарантируем отображение границ */
+        .main-table th:last-child,
+        .main-table td:last-child {
+            border-right: 1px solid #dee2e6 !important;
+        }
+        
+        /* Стиль для редактируемой ячейки */
+        .editable-cell {
+            cursor: pointer;
+        }
+        .editable-cell:focus {
+            outline: 2px solid #0d6efd;
+            background-color: #fff;
+            z-index: 30;
+        }
+        
+        /* Для мобильных устройств */
+        @media (max-width: 576px) {
+            .main-table th,
+            .main-table td {
+                font-size: 12px;
+                padding: 4px;
+            }
+            
+            .main-table th:not(:first-child),
+            .main-table td:not(:first-child) {
+                width: 30px;
+                min-width: 30px;
+                max-width: 30px;
+            }
+            
+            .main-table th:first-child,
+            .main-table td:first-child {
+                width: 80px;
+                min-width: 80px;
+                max-width: 80px;
+            }
+            
+            /* Улучшение для touch-устройств */
+            .main-table {
+                -webkit-transform: translate3d(0,0,0);
+                transform: translate3d(0,0,0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid p-0">
+        <div class="header">
+            <h5 class="m-0">Файл Главная</h5>
+        </div>
+        
+        <div class="table-container">
+            <table class="table main-table">
+                <thead>
+                    <tr id="table-header">
+                        <!-- Заголовки будут добавлены через JS -->
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Строки будут добавлены через JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Конфигурация таблицы
+            const config = {
+                rowsCount: 20,
+                colsCount: 31,
+                fixedColumnData: Array.from({length: 20}, (_, i) => `Петров ${i+1}`),
+                mainHeaderData: ['Фамилия', 'A','B','C','D','E','F','G','H','I','J','K','L','M',
+                               'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+                               'AA','AB','AC','AD','AE']
+            };
+            
+            // Создаем заголовок таблицы
+            const tableHeader = document.getElementById('table-header');
+            config.mainHeaderData.forEach(item => {
+                const th = document.createElement('th');
+                th.textContent = item;
+                tableHeader.appendChild(th);
+            });
+            
+            // Создаем тело таблицы
+            const tableBody = document.getElementById('table-body');
+            for (let i = 0; i < config.rowsCount; i++) {
+                const row = document.createElement('tr');
+                
+                // Первая ячейка (фамилия)
+                const fixedTd = document.createElement('td');
+                fixedTd.textContent = config.fixedColumnData[i];
+                row.appendChild(fixedTd);
+                
+                // Остальные ячейки (числа)
+                for (let j = 1; j <= config.colsCount; j++) {
+                    const td = document.createElement('td');
+                    td.textContent = Math.random() > 0.5 ? Math.floor(Math.random() * 100) : '';
+                    td.classList.add('editable-cell');
+                    td.setAttribute('contenteditable', 'true');
+                    row.appendChild(td);
+                }
+                
+                tableBody.appendChild(row);
+            }
+            
+            // Функция для сохранения данных
+            function saveTableData() {
+                const data = [];
+                document.querySelectorAll('#table-body tr').forEach(row => {
+                    const rowData = [];
+                    row.querySelectorAll('td').forEach(cell => {
+                        rowData.push(cell.textContent);
+                    });
+                    data.push(rowData);
+                });
+                localStorage.setItem('tableData', JSON.stringify(data));
+            }
+            
+            // Автосохранение при изменении
+            document.querySelectorAll('.editable-cell').forEach(cell => {
+                cell.addEventListener('input', saveTableData);
+            });
+            
+            // Загрузка сохраненных данных
+            function loadTableData() {
+                const savedData = localStorage.getItem('tableData');
+                if (savedData) {
+                    const data = JSON.parse(savedData);
+                    const rows = document.querySelectorAll('#table-body tr');
+                    data.forEach((rowData, rowIndex) => {
+                        if (rows[rowIndex]) {
+                            const cells = rows[rowIndex].querySelectorAll('td');
+                            rowData.forEach((cellData, cellIndex) => {
+                                if (cells[cellIndex]) {
+                                    cells[cellIndex].textContent = cellData;
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+            
+            // Загружаем данные при старте
+            loadTableData();
+            
+            // Оптимизация для touch-устройств
+            if ('ontouchstart' in window) {
+                // Добавляем highlight при касании
+                document.querySelectorAll('.main-table tr').forEach(row => {
+                    row.addEventListener('touchstart', function() {
+                        document.querySelectorAll('.main-table tr').forEach(r => {
+                            r.classList.remove('highlight');
+                        });
+                        this.classList.add('highlight');
+                    });
+                });
+                
+                // Улучшаем производительность прокрутки
+                document.querySelectorAll('.main-table td, .main-table th').forEach(el => {
+                    el.style.touchAction = 'manipulation';
+                    el.style.webkitBackfaceVisibility = 'hidden';
+                });
+                
+                // Принудительный рефреш после загрузки
+                setTimeout(() => {
+                    const container = document.querySelector('.table-container');
+                    container.style.overflow = 'hidden';
+                    setTimeout(() => {
+                        container.style.overflow = 'auto';
+                    }, 50);
+                }, 200);
+                
+                // Оптимизация для редактирования на мобильных
+                document.querySelectorAll('.editable-cell').forEach(cell => {
+                    cell.addEventListener('touchstart', function(e) {
+                        if (e.touches.length === 1) {
+                            this.focus();
+                            window.getSelection().selectAllChildren(this);
+                        }
+                    }, {passive: true});
+                });
+            }
+        });
+    </script>
+</body>
+</html>

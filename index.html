@@ -451,19 +451,7 @@
             };
             
             console.log("Sending data:", dataToSend);
-
-            function sendDataToBot() {
-            const currentData = collectTableData();
-            const changes = findChanges(originalData, currentData);
-        
-            const dataToSend = {
-                schedule_id: config.scheduleId,
-                changes: changes,
-                full_data: currentData.duties
-            };
-        
-            console.log("Sending data:", dataToSend);  // Лог перед отправкой
-
+            
             if (window.Telegram && Telegram.WebApp) {
                 Telegram.WebApp.sendData(JSON.stringify(dataToSend));
                 Telegram.WebApp.close();
@@ -471,7 +459,6 @@
                 alert('Данные подготовлены для отправки:\n' + JSON.stringify(dataToSend, null, 2));
             }
         }
-    }
     </script>
 </body>
 </html>

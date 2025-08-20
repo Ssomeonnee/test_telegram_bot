@@ -148,17 +148,10 @@
             <h5 class="m-0">График на <span id="month-year"></span></h5>
             <button class="save-btn" onclick="saveData()">💾 Сохранить</button>
         </div>
-        
         <div class="table-container">
             <table class="table main-table">
-                <thead>
-                    <tr id="table-header">
-                        <!-- Заголовки будут добавлены через JS -->
-                    </tr>
-                </thead>
-                <tbody id="table-body">
-                    <!-- Строки будут добавлены через JS -->
-                </tbody>
+                <thead><tr id="table-header"></tr></thead>
+                <tbody id="table-body"></tbody>
             </table>
         </div>
     </div>
@@ -167,171 +160,111 @@
         const isTelegramWebApp = window.Telegram && window.Telegram.WebApp;
         let scheduleData = null;
 
-        // Инициализация WebApp
-        if (isTelegramWebApp) {
-            Telegram.WebApp.ready();
-            Telegram.WebApp.expand();
-            console.log('Telegram WebApp initialized');
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (isTelegramWebApp) {
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand();
+            }
+
+            try {
+                const data = await getDataFromURL();
+                scheduleData = data;
+                createTable(data);
+            } catch (error) {
+                console.error("Ошибка загрузки данных:", error);
+                document.getElementById('month-year').textContent = 'Ошибка загрузки';
+                document.getElementById('table-header').innerHTML = '<th>Ошибка</th>';
+                document.getElementById('table-body').innerHTML = '<tr><td>Проверьте URL</td></tr>';
+            }
+        });
+
+        async function getDataFromURL() {
+            return new Promise((resolve, reject) => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const encodedData = urlParams.get('data');
+
+                if (!encodedData) {
+                    reject('Данные графика не найдены в URL');
+                    return;
+                }
+
+                try {
+                    const decodedData = decodeURIComponent(encodedData);
+                    const parsedData = JSON.parse(decodedData);
+                    resolve(parsedData);
+                } catch (error) {
+                    reject(`Ошибка обработки данных: ${error.message}`);
+                                    }
+            });
         }
 
-        // Функция для получения данных из dataInit
-        function getDataFromInit() {
-            if (isTelegramWebApp && Telegram.WebApp.initData) {
-                try {
-                    // Парсим initData
-                    const initData = new URLSearchParams(Telegram.WebApp.initData);
-                    const dataInit = initData.get('data_init');
-                    
-                    if (dataInit) {
-                        const decodedData = atob(dataInit);
-                        return JSON.parse(decodedData);
-                    }
-                } catch (error) {
-                    console.error('Error parsing initData:', error);
-                }
-            }
-            
-            // Альтернативный способ: проверяем URL параметры
-            const urlParams = new URLSearchParams(window.location.search);
-            const dataInit = urlParams.get('data_init');
-            
-            if (dataInit) {
-                try {
-                    const decodedData = atob(dataInit);
-                    return JSON.parse(decodedData);
-                } catch (error) {
-                    console.error('Error parsing URL data:', error);
-                }
-            }
-            
-            return null;
-        }
-
-        // Создание таблицы
         function createTable(data) {
-            if (!data) {
-                document.getElementById('month-year').textContent = 'Ошибка загрузки данных';
-                return;
-            }
-
-            // Обновляем заголовок
             document.getElementById('month-year').textContent = `${data.month} ${data.year}`;
-            
-            // Создаем заголовок таблицы
+
             const tableHeader = document.getElementById('table-header');
             tableHeader.innerHTML = '<th>Фамилия</th>';
-            
-            // Добавляем заголовки дней
             for (let day = 1; day <= data.days; day++) {
                 const th = document.createElement('th');
                 th.textContent = day.toString();
                 tableHeader.appendChild(th);
             }
-            
-            // Создаем матрицу для данных
-            const tableMatrix = Array(data.employees.length)
-                .fill()
-                .map(() => Array(data.days).fill(''));
-            
-            // Заполняем матрицу существующими дежурствами
-            data.duties.forEach(duty => {
-                const employeeIndex = data.employees.indexOf(duty.employee);
-                if (employeeIndex !== -1 && duty.day <= data.days) {
-                    tableMatrix[employeeIndex][duty.day - 1] = duty.place;
-                }
-            });
-            
-            // Заполняем таблицу
+
             const tableBody = document.getElementById('table-body');
             tableBody.innerHTML = '';
-            
+
             data.employees.forEach((employee, rowIndex) => {
                 const row = document.createElement('tr');
-                
-                // Первая ячейка (фамилия)
                 const fixedTd = document.createElement('td');
                 fixedTd.textContent = employee;
                 row.appendChild(fixedTd);
-                
-                // Остальные ячейки (дни месяца)
-                for (let day = 0; day < data.days; day++) {
+
+                for (let day = 1; day <= data.days; day++) {
                     const td = document.createElement('td');
-                    td.textContent = tableMatrix[rowIndex][day];
                     td.classList.add('editable-cell');
                     td.setAttribute('contenteditable', 'true');
-                    td.setAttribute('data-employee', employee);
-                    td.setAttribute('data-day', day + 1);
+                    td.dataset.employee = employee;
+                    td.dataset.day = day;
+
+                    // Заполняем ячейку данными, если они есть
+                    const duty = data.duties.find(d => d.employee === employee && d.day === day);
+                    if (duty) {
+                        td.textContent = duty.place;
+                    }
+
                     row.appendChild(td);
                 }
-                
                 tableBody.appendChild(row);
             });
-            
-            // Добавляем обработчики событий
-            setupEventHandlers();
         }
 
-        // Обработчики событий
-        function setupEventHandlers() {
-            if ('ontouchstart' in window) {
-                document.querySelectorAll('.main-table tr').forEach(row => {
-                    row.addEventListener('touchstart', function() {
-                        document.querySelectorAll('.main-table tr').forEach(r => {
-                            r.classList.remove('highlight');
-                        });
-                        this.classList.add('highlight');
-                    });
-                });
-            }
-        }
-
-        // Сохранение данных
         function saveData() {
-            if (!scheduleData) return;
-
             const fullData = [];
-            
-            document.querySelectorAll('.editable-cell').forEach(cell => {
-                const employee = cell.getAttribute('data-employee');
-                const day = parseInt(cell.getAttribute('data-day'));
-                const place = cell.textContent.trim();
-                
-                if (place) {
-                    fullData.push({ employee, day, place });
-                }
+            document.querySelectorAll('#table-body tr').forEach(row => {
+                const employee = row.querySelector('td:first-child').textContent;
+                row.querySelectorAll('td.editable-cell').forEach(cell => {
+                    const day = parseInt(cell.dataset.day);
+                    const place = cell.textContent.trim();
+                    if (place) {
+                        fullData.push({ employee: employee, day: day, place: place });
+                    }
+                });
             });
-            
+
             const dataToSend = {
                 schedule_id: scheduleData.schedule_id,
                 full_data: fullData
             };
-            
-            console.log('Data to send:', dataToSend);
-            
-            if (isTelegramWebApp) {
-                try {
-                    Telegram.WebApp.sendData(JSON.stringify(dataToSend));
-                    alert('✅ Данные отправлены!');
-                    
-                    setTimeout(() => {
-                        Telegram.WebApp.close();
-                    }, 1500);
-                } catch (error) {
-                    console.error('Error sending data:', error);
-                    alert('❌ Ошибка отправки данных');
-                }
-            } else {
-                console.log('Data for bot:', dataToSend);
-                alert('Данные готовы для отправки (см. консоль)');
-            }
+            sendDataToBot(dataToSend);
         }
 
-        // Загрузка при старте
-        document.addEventListener('DOMContentLoaded', function() {
-            scheduleData = getDataFromInit();
-            console.log('Loaded data:', scheduleData);
-            createTable(scheduleData);
-        });
+        function sendDataToBot(data) {
+            if (isTelegramWebApp) {
+                Telegram.WebApp.sendData(JSON.stringify(data));
+            } else {
+                console.log('Data to bot: ', data);
+                alert('Данные готовы для отправки боту (смотрите в консоли).');
+            }
+        }
     </script>
 </body>
 </html>

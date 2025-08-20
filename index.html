@@ -184,15 +184,15 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
+        <script>
         const isTelegramWebApp = window.Telegram && window.Telegram.WebApp;
-        let scheduleId = null; // Store scheduleId
+        let scheduleId = null;
         let month = null;
         let year = null;
         let daysInMonth = null;
         let employees = null;
-        let initialData = null;
-
+        let duties = [];
+    
         document.addEventListener('DOMContentLoaded', function () {
             // Get parameters from URL
             const urlParams = new URLSearchParams(window.location.search);
@@ -200,55 +200,86 @@
             month = urlParams.get('month');
             year = urlParams.get('year');
             daysInMonth = parseInt(urlParams.get('days'));
-            employees = urlParams.get('employees').split(',');
-
+            
+            // Получаем employees (может быть массивом через запятую)
+            const employeesParam = urlParams.get('employees');
+            if (employeesParam) {
+                employees = employeesParam.split(',');
+            } else {
+                employees = [];
+            }
+            
+            // Получаем duties (если есть)
+            const dutiesParam = urlParams.get('duties');
+            if (dutiesParam) {
+                try {
+                    duties = JSON.parse(decodeURIComponent(dutiesParam));
+                } catch (e) {
+                    console.error('Error parsing duties:', e);
+                    duties = [];
+                }
+            }
+    
+            console.log('URL Parameters:', {
+                scheduleId, month, year, daysInMonth, employees, duties
+            });
+    
+            // Проверяем, что все необходимые параметры есть
+            if (!scheduleId || !month || !year || !daysInMonth || !employees.length) {
+                document.getElementById('month-year').textContent = 'Ошибка загрузки: не все параметры переданы';
+                return;
+            }
+    
             // Set the title
-            document.querySelector('.header h5').textContent = `График на ${month} ${year}`;
-
+            document.getElementById('month-year').textContent = `График на ${month} ${year}`;
+    
             // Table Headers
             const dayHeaders = ['Фамилия'];
             for (let day = 1; day <= daysInMonth; day++) {
                 dayHeaders.push(day.toString());
             }
-
-            // Table configuration
-            const config = {
-                rowsCount: employees.length,
-                colsCount: daysInMonth,
-                fixedColumnData: employees,
-                mainHeaderData: dayHeaders
-            };
-
-            // Generate the table
+    
+            // Generate the table headers
             const tableHeader = document.getElementById('table-header');
-            config.mainHeaderData.forEach(item => {
+            tableHeader.innerHTML = '';
+            dayHeaders.forEach(item => {
                 const th = document.createElement('th');
                 th.textContent = item;
                 tableHeader.appendChild(th);
             });
-
+    
+            // Generate the table body
             const tableBody = document.getElementById('table-body');
-            for (let i = 0; i < config.rowsCount; i++) {
+            tableBody.innerHTML = '';
+    
+            employees.forEach((employee, employeeIndex) => {
                 const row = document.createElement('tr');
+                
+                // First cell (employee name)
                 const fixedTd = document.createElement('td');
-                fixedTd.textContent = config.fixedColumnData[i];
+                fixedTd.textContent = employee;
                 row.appendChild(fixedTd);
-
-                for (let j = 1; j <= config.colsCount; j++) {
+    
+                // Create cells for each day
+                for (let day = 1; day <= daysInMonth; day++) {
                     const td = document.createElement('td');
-                    td.textContent = ''; // Default empty cells
+                    
+                    // Find duty for this employee and day
+                    const duty = duties.find(d => 
+                        d.employee === employee && d.day === day
+                    );
+                    
+                    td.textContent = duty ? duty.place : '';
                     td.classList.add('editable-cell');
                     td.setAttribute('contenteditable', 'true');
-                    td.dataset.employeeIndex = i;
-                    td.dataset.day = j;
+                    td.dataset.employee = employee;
+                    td.dataset.day = day;
                     row.appendChild(td);
                 }
+                
                 tableBody.appendChild(row);
-            }
-
-            // Load saved data and set initial data
-            loadScheduleData(scheduleId);
-
+            });
+    
             // Initializing touch effects
             if ('ontouchstart' in window) {
                 document.querySelectorAll('.main-table tr').forEach(row => {
@@ -261,75 +292,55 @@
                 });
             }
         });
-
-        function loadScheduleData(scheduleId) {
-            const savedData = localStorage.getItem(`schedule_${scheduleId}`);
-            if (savedData) {
-                initialData = JSON.parse(savedData);
-                console.log('Data loaded from localstorage:', initialData);
-                applySavedDataToTable(initialData);
-            } else {
-                initialData = getDefaultScheduleData();
-                console.log('No data in localstorage, starting clean');
-            }
-        }
-
-        function applySavedDataToTable(data) {
-            for (const duty of data) {
-                const employeeIndex = employees.indexOf(duty.employee);
-                const day = duty.day;
-                if (employeeIndex !== -1) {
-                    const cell = document.querySelector(`#table-body tr:nth-child(${employeeIndex + 1}) td[data-day="${day}"]`);
-                    if (cell) {
-                        cell.textContent = duty.place;
-                    }
-                }
-            }
-        }
-
-        function getDefaultScheduleData() {
-            let data = [];
-            document.querySelectorAll('#table-body tr').forEach(row => {
-                const employee = row.querySelector('td:first-child').textContent;
-                row.querySelectorAll('td.editable-cell').forEach(cell => {
-                    data.push({
-                        employee: employee,
-                        day: parseInt(cell.dataset.day),
-                        place: ''
-                    });
-                });
-            });
-            return data;
-        }
-
+    
         function saveData() {
             let scheduleData = [];
+            
             document.querySelectorAll('#table-body tr').forEach(row => {
                 const employee = row.querySelector('td:first-child').textContent;
+                
                 row.querySelectorAll('td.editable-cell').forEach(cell => {
-                    if (cell.textContent.trim() !== '') {
+                    const day = parseInt(cell.dataset.day);
+                    const place = cell.textContent.trim();
+                    
+                    if (place) {
                         scheduleData.push({
                             employee: employee,
-                            day: parseInt(cell.dataset.day),
-                            place: cell.textContent.trim()
+                            day: day,
+                            place: place
                         });
                     }
                 });
             });
         
-            // Format and send data (УПРОЩЕННЫЙ ФОРМАТ)
+            // Format and send data
             const dataToSend = {
                 schedule_id: scheduleId,
                 full_data: scheduleData
             };
+            
+            console.log('Data to send:', dataToSend);
             sendDataToBot(dataToSend);
-            console.log('Data sent to bot:', dataToSend);
         }
-
+    
         function sendDataToBot(data) {
             if (isTelegramWebApp) {
-                Telegram.WebApp.sendData(JSON.stringify(data));
-                console.log('Data sent using Telegram WebApp');
+                try {
+                    Telegram.WebApp.sendData(JSON.stringify(data));
+                    console.log('Data sent using Telegram WebApp');
+                    
+                    // Show success message
+                    alert('✅ Данные успешно отправлены!');
+                    
+                    // Close WebApp after a delay
+                    setTimeout(() => {
+                        Telegram.WebApp.close();
+                    }, 1500);
+                    
+                } catch (error) {
+                    console.error('Error sending data:', error);
+                    alert('❌ Ошибка отправки данных: ' + error.message);
+                }
             } else {
                 console.log('Data to bot: ', data);
                 alert('Данные готовы для отправки боту (смотрите в консоли).');
@@ -338,4 +349,5 @@
     </script>
 </body>
 </html>
+
 

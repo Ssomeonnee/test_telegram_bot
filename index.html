@@ -168,275 +168,308 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Глобальные переменные для хранения данных
-        let scheduleData = null;
-        let originalData = null;
+    // Глобальные переменные для хранения данных
+    let scheduleData = null;
+    let originalData = null;
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Получаем данные из URL параметра data
-            const urlParams = new URLSearchParams(window.location.search);
-            const encodedData = urlParams.get('data');
+    document.addEventListener('DOMContentLoaded', function() {
+        // Получаем данные из URL параметра data
+        const urlParams = new URLSearchParams(window.location.search);
+        const encodedData = urlParams.get('data');
+        
+        if (!encodedData) {
+            alert('Данные графика не найдены');
+            return;
+        }
+        
+        try {
+            // Декодируем данные
+            const decodedData = atob(encodedData);
+            scheduleData = JSON.parse(decodedData);
             
-            if (!encodedData) {
-                alert('Данные графика не найдены');
-                return;
+            // Сохраняем оригинальные данные для сравнения
+            originalData = JSON.parse(JSON.stringify(scheduleData));
+            
+            // Обновляем заголовок
+            document.querySelector('.header h5').textContent = `График на ${scheduleData.month} ${scheduleData.year}`;
+            
+            // Формируем заголовки дней
+            const dayHeaders = ['Фамилия'];
+            for (let day = 1; day <= scheduleData.days; day++) {
+                dayHeaders.push(day.toString());
             }
             
-            try {
-                // Декодируем данные
-                const decodedData = atob(encodedData);
-                scheduleData = JSON.parse(decodedData);
+            // Создаем заголовок таблицы
+            const tableHeader = document.getElementById('table-header');
+            dayHeaders.forEach(item => {
+                const th = document.createElement('th');
+                th.textContent = item;
+                tableHeader.appendChild(th);
+            });
+            
+            // Создаем тело таблицы
+            const tableBody = document.getElementById('table-body');
+            
+            // Создаем матрицу для хранения данных
+            const tableMatrix = Array(scheduleData.employees.length)
+                .fill()
+                .map(() => Array(scheduleData.days).fill(''));
+            
+            // Заполняем матрицу существующими дежурствами
+            scheduleData.duties.forEach(duty => {
+                const employeeIndex = scheduleData.employees.indexOf(duty.employee);
+                if (employeeIndex !== -1 && duty.day <= scheduleData.days) {
+                    tableMatrix[employeeIndex][duty.day - 1] = duty.place;
+                }
+            });
+            
+            // Заполняем таблицу
+            scheduleData.employees.forEach((employee, rowIndex) => {
+                const row = document.createElement('tr');
                 
-                // Сохраняем оригинальные данные для сравнения
-                originalData = JSON.parse(JSON.stringify(scheduleData));
+                // Первая ячейка (фамилия)
+                const fixedTd = document.createElement('td');
+                fixedTd.textContent = employee;
+                row.appendChild(fixedTd);
                 
-                // Обновляем заголовок
-                document.querySelector('.header h5').textContent = `График на ${scheduleData.month} ${scheduleData.year}`;
-                
-                // Формируем заголовки дней
-                const dayHeaders = ['Фамилия'];
-                for (let day = 1; day <= scheduleData.days; day++) {
-                    dayHeaders.push(day.toString());
+                // Остальные ячейки (дни месяца)
+                for (let day = 0; day < scheduleData.days; day++) {
+                    const td = document.createElement('td');
+                    td.textContent = tableMatrix[rowIndex][day];
+                    td.classList.add('editable-cell');
+                    td.setAttribute('contenteditable', 'true');
+                    td.setAttribute('data-employee', employee);
+                    td.setAttribute('data-day', day + 1);
+                    row.appendChild(td);
                 }
                 
-                // Создаем заголовок таблицы
-                const tableHeader = document.getElementById('table-header');
-                dayHeaders.forEach(item => {
-                    const th = document.createElement('th');
-                    th.textContent = item;
-                    tableHeader.appendChild(th);
-                });
-                
-                // Создаем тело таблицы
-                const tableBody = document.getElementById('table-body');
-                
-                // Создаем матрицу для хранения данных
-                const tableMatrix = Array(scheduleData.employees.length)
-                    .fill()
-                    .map(() => Array(scheduleData.days).fill(''));
-                
-                // Заполняем матрицу существующими дежурствами
-                scheduleData.duties.forEach(duty => {
-                    const employeeIndex = scheduleData.employees.indexOf(duty.employee);
-                    if (employeeIndex !== -1 && duty.day <= scheduleData.days) {
-                        tableMatrix[employeeIndex][duty.day - 1] = duty.place;
-                    }
-                });
-                
-                // Заполняем таблицу
-                scheduleData.employees.forEach((employee, rowIndex) => {
-                    const row = document.createElement('tr');
-                    
-                    // Первая ячейка (фамилия)
-                    const fixedTd = document.createElement('td');
-                    fixedTd.textContent = employee;
-                    row.appendChild(fixedTd);
-                    
-                    // Остальные ячейки (дни месяца)
-                    for (let day = 0; day < scheduleData.days; day++) {
-                        const td = document.createElement('td');
-                        td.textContent = tableMatrix[rowIndex][day];
-                        td.classList.add('editable-cell');
-                        td.setAttribute('contenteditable', 'true');
-                        td.setAttribute('data-employee', employee);
-                        td.setAttribute('data-day', day + 1);
-                        row.appendChild(td);
-                    }
-                    
-                    tableBody.appendChild(row);
-                });
-                
-                // Добавляем обработчики событий
-                setupEventHandlers();
-                
-            } catch (error) {
-                console.error('Ошибка обработки данных:', error);
-                alert('Ошибка загрузки графика');
+                tableBody.appendChild(row);
+            });
+            
+            // Добавляем обработчики событий
+            setupEventHandlers();
+            
+            // Инициализируем Telegram WebApp
+            initTelegramWebApp();
+            
+        } catch (error) {
+            console.error('Ошибка обработки данных:', error);
+            alert('Ошибка загрузки графика');
+        }
+    });
+
+    function setupEventHandlers() {
+        // Автосохранение при изменении
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('editable-cell')) {
+                debouncedSaveChanges();
             }
         });
+    }
 
-        function setupEventHandlers() {
-            // Автосохранение при изменении
-            document.addEventListener('input', function(e) {
-                if (e.target.classList.contains('editable-cell')) {
-                    debouncedSaveChanges();
-                }
-            });
+    // Функция для определения изменений
+    function getChanges() {
+        const changes = {
+            added: [],
+            removed: [],
+            changed: []
+        };
+        
+        const currentDuties = [];
+        
+        // Собираем текущие данные
+        document.querySelectorAll('.editable-cell').forEach(cell => {
+            const employee = cell.getAttribute('data-employee');
+            const day = parseInt(cell.getAttribute('data-day'));
+            const place = cell.textContent.trim();
             
-            // Обработка касания для мобильных устройств
-            if ('ontouchstart' in window) {
-                document.querySelectorAll('.main-table tr').forEach(row => {
-                    row.addEventListener('touchstart', function() {
-                        document.querySelectorAll('.main-table tr').forEach(r => {
-                            r.classList.remove('highlight');
-                        });
-                        this.classList.add('highlight');
-                    });
-                });
-                
-                document.querySelectorAll('.editable-cell').forEach(cell => {
-                    cell.addEventListener('touchstart', function(e) {
-                        if (e.touches.length === 1) {
-                            this.focus();
-                            window.getSelection().selectAllChildren(this);
-                        }
-                    }, {passive: true});
+            if (place) {
+                currentDuties.push({ employee, day, place });
+            }
+        });
+        
+        // Сравниваем с оригинальными данными
+        const originalDutiesMap = new Map();
+        scheduleData.duties.forEach(duty => {
+            const key = `${duty.employee}-${duty.day}`;
+            originalDutiesMap.set(key, duty.place);
+        });
+        
+        const currentDutiesMap = new Map();
+        currentDuties.forEach(duty => {
+            const key = `${duty.employee}-${duty.day}`;
+            currentDutiesMap.set(key, duty.place);
+        });
+        
+        // Находим добавленные
+        currentDuties.forEach(duty => {
+            const key = `${duty.employee}-${duty.day}`;
+            if (!originalDutiesMap.has(key)) {
+                changes.added.push(duty);
+            }
+        });
+        
+        // Находим удаленные
+        scheduleData.duties.forEach(duty => {
+            const key = `${duty.employee}-${duty.day}`;
+            if (!currentDutiesMap.has(key)) {
+                changes.removed.push(duty);
+            }
+        });
+        
+        // Находим измененные
+        scheduleData.duties.forEach(duty => {
+            const key = `${duty.employee}-${duty.day}`;
+            if (currentDutiesMap.has(key) && currentDutiesMap.get(key) !== duty.place) {
+                changes.changed.push({
+                    old: duty,
+                    new: {
+                        employee: duty.employee,
+                        day: duty.day,
+                        place: currentDutiesMap.get(key)
+                    }
                 });
             }
-        }
+        });
+        
+        return changes;
+    }
 
-        // Функция для определения изменений
-        function getChanges() {
-            const changes = {
-                added: [],
-                removed: [],
-                changed: []
-            };
-            
-            const currentDuties = [];
-            
-            // Собираем текущие данные
-            document.querySelectorAll('.editable-cell').forEach(cell => {
-                const employee = cell.getAttribute('data-employee');
-                const day = parseInt(cell.getAttribute('data-day'));
-                const place = cell.textContent.trim();
-                
-                if (place) {
-                    currentDuties.push({ employee, day, place });
-                }
-            });
-            
-            // Сравниваем с оригинальными данными
-            const originalDutiesMap = new Map();
-            scheduleData.duties.forEach(duty => {
-                const key = `${duty.employee}-${duty.day}`;
-                originalDutiesMap.set(key, duty.place);
-            });
-            
-            const currentDutiesMap = new Map();
-            currentDuties.forEach(duty => {
-                const key = `${duty.employee}-${duty.day}`;
-                currentDutiesMap.set(key, duty.place);
-            });
-            
-            // Находим добавленные
-            currentDuties.forEach(duty => {
-                const key = `${duty.employee}-${duty.day}`;
-                if (!originalDutiesMap.has(key)) {
-                    changes.added.push(duty);
-                }
-            });
-            
-            // Находим удаленные
-            scheduleData.duties.forEach(duty => {
-                const key = `${duty.employee}-${duty.day}`;
-                if (!currentDutiesMap.has(key)) {
-                    changes.removed.push(duty);
-                }
-            });
-            
-            // Находим измененные
-            scheduleData.duties.forEach(duty => {
-                const key = `${duty.employee}-${duty.day}`;
-                if (currentDutiesMap.has(key) && currentDutiesMap.get(key) !== duty.place) {
-                    changes.changed.push({
-                        old: duty,
-                        new: {
-                            employee: duty.employee,
-                            day: duty.day,
-                            place: currentDutiesMap.get(key)
-                        }
-                    });
-                }
-            });
-            
-            return changes;
-        }
-
-        // Функция для отправки данных в Telegram
-        function saveChangesToTelegram() {
-            const changes = getChanges();
-            
-            const dataToSend = {
-                schedule_id: scheduleData.schedule_id,
-                changes: changes,
-                full_data: getFullTableData()
-            };
-            
-            // Отправляем данные через Telegram WebApp
-            if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
-                Telegram.WebApp.sendData(JSON.stringify(dataToSend));
-                console.log('Данные отправлены через Telegram WebApp');
-            } else if (window.Telegram && window.Telegram.WebApp) {
+    // Функция для отправки данных в Telegram
+    function saveChangesToTelegram() {
+        const changes = getChanges();
+        
+        const dataToSend = {
+            schedule_id: scheduleData.schedule_id,
+            changes: changes,
+            full_data: getFullTableData()
+        };
+        
+        console.log('Данные для отправки:', dataToSend);
+        
+        // Пытаемся отправить через Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            try {
                 window.Telegram.WebApp.sendData(JSON.stringify(dataToSend));
                 console.log('Данные отправлены через window.Telegram.WebApp');
-            } else {
-                alert('Telegram WebApp не обнаружен. Данные для отправки:', dataToSend);
-                
-                // Попробуем найти объект другими способами
-                const telegramObj = window.Telegram || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.TelegramWebApp);
-                
-                if (telegramObj && telegramObj.WebApp) {
-                    telegramObj.WebApp.sendData(JSON.stringify(dataToSend));
-                    console.log('Данные отправлены через альтернативный доступ');
-                } else {
-                    alert('Ошибка: Не удалось отправить данные в бота');
-                }
+                showNotification('✅ Данные сохранены!');
+                return;
+            } catch (error) {
+                console.error('Ошибка отправки через Telegram:', error);
             }
         }
-
-        // Функция для получения всех данных таблицы
-        function getFullTableData() {
-            const fullData = [];
-            
-            document.querySelectorAll('.editable-cell').forEach(cell => {
-                const employee = cell.getAttribute('data-employee');
-                const day = parseInt(cell.getAttribute('data-day'));
-                const place = cell.textContent.trim();
-                
-                if (place) {
-                    fullData.push({ employee, day, place });
-                }
-            });
-            
-            return fullData;
-        }
-
-        // Debounce функция для оптимизации
-        let debounceTimer;
-        function debouncedSaveChanges() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(saveChangesToTelegram, 1000);
-        }
-
-        // Инициализация Telegram WebApp
-        function initTelegramWebApp() {
-            if (typeof Telegram !== 'undefined') {
-                Telegram.WebApp.ready();
-                Telegram.WebApp.expand();
-                alert('Telegram WebApp инициализирован');
-            } else if (window.Telegram) {
-                window.Telegram.WebApp.ready();
-                window.Telegram.WebApp.expand();
-                alert('Telegram WebApp инициализирован через window');
-            } else {
-                console.log('Telegram WebApp не доступен');
-                // Попробуем подождать, может API загрузится позже
-                setTimeout(() => {
-                    if (typeof Telegram !== 'undefined') {
-                        Telegram.WebApp.ready();
-                        Telegram.WebApp.expand();
-                    }
-                }, 1000);
+        
+        // Пытаемся отправить через Telegram (глобальный объект)
+        if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+            try {
+                Telegram.WebApp.sendData(JSON.stringify(dataToSend));
+                console.log('Данные отправлены через Telegram.WebApp');
+                showNotification('✅ Данные сохранены!');
+                return;
+            } catch (error) {
+                console.error('Ошибка отправки через Telegram:', error);
             }
         }
-        alert('Window objects:', Object.keys(window).filter(key => key.toLowerCase().includes('telegram') || key.toLowerCase().includes('webapp')));
-        alert('Telegram object:', typeof Telegram !== 'undefined' ? Telegram : 'undefined');
-        alert('window.Telegram:', window.Telegram ? 'exists' : 'does not exist');
-        // Вызываем инициализацию
-        initTelegramWebApp();
-    </script>
+        
+        // Если Telegram API не доступен, используем postMessage
+        try {
+            // Этот метод работает в WebView Telegram
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify(dataToSend));
+                console.log('Данные отправлены через ReactNativeWebView');
+            } else if (window.webkit && window.webkit.messageHandlers) {
+                // Для iOS WebView
+                window.webkit.messageHandlers.telegramWebApp.postMessage(JSON.stringify(dataToSend));
+                console.log('Данные отправлены через iOS WebView');
+            } else {
+                // Последняя попытка - отправляем сообщение в родительское окно
+                window.parent.postMessage({
+                    type: 'telegram_web_app_data',
+                    data: dataToSend
+                }, '*');
+                console.log('Данные отправлены через postMessage');
+            }
+            showNotification('✅ Данные сохранены!');
+        } catch (error) {
+            console.error('Все методы отправки не сработали:', error);
+            showNotification('❌ Ошибка отправки данных');
+        }
+    }
+
+    // Функция для получения всех данных таблицы
+    function getFullTableData() {
+        const fullData = [];
+        
+        document.querySelectorAll('.editable-cell').forEach(cell => {
+            const employee = cell.getAttribute('data-employee');
+            const day = parseInt(cell.getAttribute('data-day'));
+            const place = cell.textContent.trim();
+            
+            if (place) {
+                fullData.push({ employee, day, place });
+            }
+        });
+        
+        return fullData;
+    }
+
+    // Debounce функция для оптимизации
+    let debounceTimer;
+    function debouncedSaveChanges() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(saveChangesToTelegram, 1000);
+    }
+
+    // Функция для показа уведомлений
+    function showNotification(message) {
+        // Создаем элемент для уведомления
+        const notification = document.createElement('div');
+        notification.style.position = 'fixed';
+        notification.style.top = '20px';
+        notification.style.right = '20px';
+        notification.style.background = '#28a745';
+        notification.style.color = 'white';
+        notification.style.padding = '10px 15px';
+        notification.style.borderRadius = '5px';
+        notification.style.zIndex = '1000';
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        // Удаляем через 3 секунды
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 3000);
+    }
+
+    // Инициализация Telegram WebApp
+    function initTelegramWebApp() {
+        // Ждем немного, чтобы Telegram API успел загрузиться
+        setTimeout(() => {
+            if (window.Telegram && window.Telegram.WebApp) {
+                try {
+                    window.Telegram.WebApp.ready();
+                    window.Telegram.WebApp.expand();
+                    console.log('Telegram WebApp инициализирован через window');
+                } catch (error) {
+                    console.error('Ошибка инициализации Telegram WebApp:', error);
+                }
+            } else if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+                try {
+                    Telegram.WebApp.ready();
+                    Telegram.WebApp.expand();
+                    console.log('Telegram WebApp инициализирован через глобальный объект');
+                } catch (error) {
+                    console.error('Ошибка инициализации Telegram WebApp:', error);
+                }
+            } else {
+                console.log('Telegram WebApp API не обнаружен');
+            }
+        }, 100);
+    }
+</script>
 </body>
 </html>
+
 
 

@@ -467,9 +467,43 @@
             }
         }, 100);
     }
+
+        function testSendData() {
+        const testData = {
+            schedule_id: scheduleData.schedule_id,
+            changes: {
+                added: [
+                    {employee: scheduleData.employees[0], day: 1, place: "Тест"}
+                ],
+                removed: [],
+                changed: []
+            },
+            full_data: [
+                {employee: scheduleData.employees[0], day: 1, place: "Тест"}
+            ]
+        };
+        
+        console.log('Тестовые данные:', testData);
+        
+        // Попробуем отправить разными способами
+        if (window.Telegram && window.Telegram.WebApp) {
+            try {
+                window.Telegram.WebApp.sendData(JSON.stringify(testData));
+                console.log('Тестовые данные отправлены через window.Telegram.WebApp');
+            } catch (error) {
+                console.error('Ошибка отправки тестовых данных:', error);
+            }
+        } else {
+            console.log('Telegram WebApp не доступен для тестовой отправки');
+        }
+    }
+    
+    // Вызовем тестовую функцию через 3 секунды после загрузки
+    setTimeout(testSendData, 3000);
 </script>
 </body>
 </html>
+
 
 
 

@@ -162,11 +162,12 @@
         let scheduleData = null;
 
         document.addEventListener('DOMContentLoaded', async function () {
-            if (isTelegramWebApp) {
-                Telegram.WebApp.ready();
-                Telegram.WebApp.expand();
-            }
+            
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
 
+            isTelegramWebApp = window.Telegram && window.Telegram.WebApp;
+            
             alert("isTelegramWebApp: ", isTelegramWebApp);
 
             try {
@@ -271,5 +272,6 @@
     </script>
 </body>
 </html>
+
 
 

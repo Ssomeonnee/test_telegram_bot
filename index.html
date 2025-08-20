@@ -371,7 +371,7 @@
                 window.Telegram.WebApp.sendData(JSON.stringify(dataToSend));
                 console.log('Данные отправлены через window.Telegram.WebApp');
             } else {
-                console.log('Telegram WebApp не обнаружен. Данные для отправки:', dataToSend);
+                alert('Telegram WebApp не обнаружен. Данные для отправки:', dataToSend);
                 
                 // Попробуем найти объект другими способами
                 const telegramObj = window.Telegram || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.TelegramWebApp);
@@ -414,11 +414,11 @@
             if (typeof Telegram !== 'undefined') {
                 Telegram.WebApp.ready();
                 Telegram.WebApp.expand();
-                console.log('Telegram WebApp инициализирован');
+                alert('Telegram WebApp инициализирован');
             } else if (window.Telegram) {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
-                console.log('Telegram WebApp инициализирован через window');
+                alert('Telegram WebApp инициализирован через window');
             } else {
                 console.log('Telegram WebApp не доступен');
                 // Попробуем подождать, может API загрузится позже
@@ -430,10 +430,13 @@
                 }, 1000);
             }
         }
-        
+        alert('Window objects:', Object.keys(window).filter(key => key.toLowerCase().includes('telegram') || key.toLowerCase().includes('webapp')));
+        alert('Telegram object:', typeof Telegram !== 'undefined' ? Telegram : 'undefined');
+        alert('window.Telegram:', window.Telegram ? 'exists' : 'does not exist');
         // Вызываем инициализацию
         initTelegramWebApp();
     </script>
 </body>
 </html>
+
 

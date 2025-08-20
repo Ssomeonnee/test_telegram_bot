@@ -364,11 +364,24 @@
             };
             
             // Отправляем данные через Telegram WebApp
-            if (window.Telegram && window.Telegram.WebApp) {
+            if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+                Telegram.WebApp.sendData(JSON.stringify(dataToSend));
+                console.log('Данные отправлены через Telegram WebApp');
+            } else if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.sendData(JSON.stringify(dataToSend));
+                console.log('Данные отправлены через window.Telegram.WebApp');
             } else {
-                console.log('Данные для отправки:', dataToSend);
-                alert('Изменения сохранены (тестовый режим)');
+                console.log('Telegram WebApp не обнаружен. Данные для отправки:', dataToSend);
+                
+                // Попробуем найти объект другими способами
+                const telegramObj = window.Telegram || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.TelegramWebApp);
+                
+                if (telegramObj && telegramObj.WebApp) {
+                    telegramObj.WebApp.sendData(JSON.stringify(dataToSend));
+                    console.log('Данные отправлены через альтернативный доступ');
+                } else {
+                    alert('Ошибка: Не удалось отправить данные в бота');
+                }
             }
         }
 
@@ -397,10 +410,30 @@
         }
 
         // Инициализация Telegram WebApp
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.ready();
-            window.Telegram.WebApp.expand();
+        function initTelegramWebApp() {
+            if (typeof Telegram !== 'undefined') {
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand();
+                console.log('Telegram WebApp инициализирован');
+            } else if (window.Telegram) {
+                window.Telegram.WebApp.ready();
+                window.Telegram.WebApp.expand();
+                console.log('Telegram WebApp инициализирован через window');
+            } else {
+                console.log('Telegram WebApp не доступен');
+                // Попробуем подождать, может API загрузится позже
+                setTimeout(() => {
+                    if (typeof Telegram !== 'undefined') {
+                        Telegram.WebApp.ready();
+                        Telegram.WebApp.expand();
+                    }
+                }, 1000);
+            }
         }
+        
+        // Вызываем инициализацию
+        initTelegramWebApp();
     </script>
 </body>
 </html>
+

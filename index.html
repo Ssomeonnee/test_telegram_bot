@@ -303,7 +303,8 @@
         }
 
         function saveData() {
-            let scheduleData = [];document.querySelectorAll('#table-body tr').forEach(row => {
+            let scheduleData = [];
+            document.querySelectorAll('#table-body tr').forEach(row => {
                 const employee = row.querySelector('td:first-child').textContent;
                 row.querySelectorAll('td.editable-cell').forEach(cell => {
                     if (cell.textContent.trim() !== '') {
@@ -315,9 +316,8 @@
                     }
                 });
             });
-            localStorage.setItem(`schedule_${scheduleId}`, JSON.stringify(scheduleData));
-
-            // Format and send data
+        
+            // Format and send data (УПРОЩЕННЫЙ ФОРМАТ)
             const dataToSend = {
                 schedule_id: scheduleId,
                 full_data: scheduleData
@@ -331,10 +331,11 @@
                 Telegram.WebApp.sendData(JSON.stringify(data));
                 console.log('Data sent using Telegram WebApp');
             } else {
-                console.log('Data to bot: ', data)
+                console.log('Data to bot: ', data);
                 alert('Данные готовы для отправки боту (смотрите в консоли).');
             }
         }
     </script>
 </body>
 </html>
+

@@ -2,53 +2,25 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Таблица с закрепленным столбцом</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
             overflow-x: auto;
             touch-action: manipulation;
             -webkit-text-size-adjust: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
         
         .header {
             background-color: #f8f9fa;
             padding: 10px;
+            text-align: center;
             margin-bottom: 10px;
             border-bottom: 1px solid #dee2e6;
             position: sticky;
             top: 0;
             z-index: 100;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .header-title {
-            flex-grow: 1;
-            text-align: center;
-        }
-        
-        .save-btn {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-        
-        .save-btn:hover {
-            background-color: #218838;
         }
         
         .table-container {
@@ -136,7 +108,6 @@
         /* Стиль для редактируемой ячейки */
         .editable-cell {
             cursor: pointer;
-            min-height: 20px;
         }
         .editable-cell:focus {
             outline: 2px solid #0d6efd;
@@ -177,12 +148,7 @@
 <body>
     <div class="container-fluid p-0">
         <div class="header">
-            <div class="header-title">
-                <h5 id="schedule-title" class="m-0">Загрузка графика...</h5>
-            </div>
-            <button id="save-btn" class="save-btn" title="Сохранить изменения">
-                <i class="fas fa-save"></i>
-            </button>
+            <h5 class="m-0">Файл Главная</h5>
         </div>
         
         <div class="table-container">
@@ -200,85 +166,20 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
     <script>
-        // Глобальные переменные для хранения данных
-        let originalData = {};
-        let config = {};
-        
         document.addEventListener('DOMContentLoaded', function() {
-            // Инициализация Telegram WebApp
-            if (window.Telegram && Telegram.WebApp) {
-                Telegram.WebApp.expand();
-                Telegram.WebApp.enableClosingConfirmation();
-            }
-
-            // Получаем данные из URL параметра
-            const urlParams = new URLSearchParams(window.location.search);
-            const encodedData = urlParams.get('data');
+            // Конфигурация таблицы
+            const config = {
+                rowsCount: 20,
+                colsCount: 31,
+                fixedColumnData: Array.from({length: 20}, (_, i) => `Петров ${i+1}`),
+                mainHeaderData: ['Фамилия', 'A','B','C','D','E','F','G','H','I','J','K','L','M',
+                               'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+                               'AA','AB','AC','AD','AE']
+            };
             
-            if (!encodedData) {
-                showError("No data parameter found in URL");
-                return;
-            }
-
-            try {
-                // Декодируем данные из base64
-                const decodedData = decodeURIComponent(escape(atob(encodedData)));
-                const webAppData = JSON.parse(decodedData);
-                
-                console.log("Received data:", webAppData);
-                
-                // Сохраняем исходные данные
-                originalData = {
-                    duties: webAppData.duties || [],
-                    employees: webAppData.employees || []
-                };
-                
-                // Обновляем заголовок
-                document.getElementById('schedule-title').textContent = `График на ${webAppData.month} ${webAppData.year}`;
-                
-                // Формируем заголовки дней
-                const dayHeaders = ['Фамилия'];
-                for (let day = 1; day <= webAppData.days; day++) {
-                    dayHeaders.push(day.toString());
-                }
-                
-                // Конфигурация таблицы
-                config = {
-                    rowsCount: webAppData.employees.length,
-                    colsCount: webAppData.days,
-                    fixedColumnData: webAppData.employees,
-                    mainHeaderData: dayHeaders,
-                    scheduleId: webAppData.schedule_id,
-                    month: webAppData.month,
-                    year: webAppData.year
-                };
-                
-                // Создаем таблицу
-                createTable();
-                
-                // Заполняем таблицу исходными данными
-                fillTableWithDuties(originalData.duties);
-                
-                // Настройка обработчиков событий
-                setupEventListeners();
-                
-            } catch (error) {
-                console.error("Error parsing data:", error);
-                showError("Ошибка загрузки данных");
-            }
-        });
-        
-        function showError(message) {
-            document.getElementById('schedule-title').textContent = message;
-            document.getElementById('save-btn').style.display = 'none';
-        }
-        
-        function createTable() {
             // Создаем заголовок таблицы
             const tableHeader = document.getElementById('table-header');
-            tableHeader.innerHTML = '';
             config.mainHeaderData.forEach(item => {
                 const th = document.createElement('th');
                 th.textContent = item;
@@ -287,8 +188,6 @@
             
             // Создаем тело таблицы
             const tableBody = document.getElementById('table-body');
-            tableBody.innerHTML = '';
-            
             for (let i = 0; i < config.rowsCount; i++) {
                 const row = document.createElement('tr');
                 
@@ -297,10 +196,10 @@
                 fixedTd.textContent = config.fixedColumnData[i];
                 row.appendChild(fixedTd);
                 
-                // Остальные ячейки (дни месяца)
+                // Остальные ячейки (числа)
                 for (let j = 1; j <= config.colsCount; j++) {
                     const td = document.createElement('td');
-                    td.textContent = ''; // Пустые ячейки по умолчанию
+                    td.textContent = Math.random() > 0.5 ? Math.floor(Math.random() * 100) : '';
                     td.classList.add('editable-cell');
                     td.setAttribute('contenteditable', 'true');
                     row.appendChild(td);
@@ -308,157 +207,86 @@
                 
                 tableBody.appendChild(row);
             }
-        }
-        
-        function fillTableWithDuties(duties) {
-            const rows = document.querySelectorAll('#table-body tr');
             
-            // Очищаем все ячейки
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td:not(:first-child)');
-                cells.forEach(cell => {
-                    cell.textContent = '';
+            // Функция для сохранения данных
+            function saveTableData() {
+                const data = [];
+                document.querySelectorAll('#table-body tr').forEach(row => {
+                    const rowData = [];
+                    row.querySelectorAll('td').forEach(cell => {
+                        rowData.push(cell.textContent);
+                    });
+                    data.push(rowData);
                 });
-            });
+                localStorage.setItem('tableData', JSON.stringify(data));
+            }
             
-            // Заполняем дежурствами
-            duties.forEach(duty => {
-                const employeeIndex = config.fixedColumnData.indexOf(duty.employee);
-                if (employeeIndex >= 0 && rows[employeeIndex]) {
-                    const dayCell = rows[employeeIndex].querySelectorAll('td')[duty.day]; // +1 так как первый столбец - фамилия
-                    if (dayCell) {
-                        dayCell.textContent = duty.place;
-                    }
-                }
-            });
-        }
-        
-        function setupEventListeners() {
             // Автосохранение при изменении
-            document.addEventListener('input', function(e) {
-                if (e.target.classList.contains('editable-cell')) {
-                    // Можно добавить дополнительную логику при изменении
-                }
+            document.querySelectorAll('.editable-cell').forEach(cell => {
+                cell.addEventListener('input', saveTableData);
             });
             
-            // Кнопка сохранения
-            document.getElementById('save-btn').addEventListener('click', sendDataToBot);
+            // Загрузка сохраненных данных
+            function loadTableData() {
+                const savedData = localStorage.getItem('tableData');
+                if (savedData) {
+                    const data = JSON.parse(savedData);
+                    const rows = document.querySelectorAll('#table-body tr');
+                    data.forEach((rowData, rowIndex) => {
+                        if (rows[rowIndex]) {
+                            const cells = rows[rowIndex].querySelectorAll('td');
+                            rowData.forEach((cellData, cellIndex) => {
+                                if (cells[cellIndex]) {
+                                    cells[cellIndex].textContent = cellData;
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+            
+            // Загружаем данные при старте
+            loadTableData();
             
             // Оптимизация для touch-устройств
             if ('ontouchstart' in window) {
-                setupTouchEvents();
-            }
-        }
-        
-        function setupTouchEvents() {
-            // Добавляем highlight при касании
-            document.querySelectorAll('.main-table tr').forEach(row => {
-                row.addEventListener('touchstart', function() {
-                    document.querySelectorAll('.main-table tr').forEach(r => {
-                        r.classList.remove('highlight');
-                    });
-                    this.classList.add('highlight');
-                }, {passive: true});
-            });
-            
-            // Оптимизация для редактирования на мобильных
-            document.querySelectorAll('.editable-cell').forEach(cell => {
-                cell.addEventListener('touchstart', function(e) {
-                    if (e.touches.length === 1) {
-                        this.focus();
-                        window.getSelection().selectAllChildren(this);
-                    }
-                }, {passive: true});
-            });
-        }
-        
-        function collectTableData() {
-            const data = {
-                schedule_id: config.scheduleId,
-                duties: []
-            };
-            
-            document.querySelectorAll('#table-body tr').forEach((row, rowIndex) => {
-                const employee = config.fixedColumnData[rowIndex];
-                const cells = row.querySelectorAll('td:not(:first-child)');
-                
-                cells.forEach((cell, dayIndex) => {
-                    const day = dayIndex + 1;
-                    const place = cell.textContent.trim();
-                    
-                    if (place) {
-                        data.duties.push({
-                            employee: employee,
-                            day: day,
-                            place: place
+                // Добавляем highlight при касании
+                document.querySelectorAll('.main-table tr').forEach(row => {
+                    row.addEventListener('touchstart', function() {
+                        document.querySelectorAll('.main-table tr').forEach(r => {
+                            r.classList.remove('highlight');
                         });
-                    }
-                });
-            });
-            
-            return data;
-        }
-        
-        function findChanges(original, current) {
-            const originalDict = {};
-            original.duties.forEach(d => {
-                const key = `${d.employee}_${d.day}`;
-                originalDict[key] = d.place;
-            });
-            
-            const currentDict = {};
-            current.duties.forEach(d => {
-                const key = `${d.employee}_${d.day}`;
-                currentDict[key] = d.place;
-            });
-            
-            const added = [];
-            const removed = [];
-            const changed = [];
-            
-            // Находим добавленные и измененные
-            current.duties.forEach(d => {
-                const key = `${d.employee}_${d.day}`;
-                if (!originalDict[key]) {
-                    added.push(d);
-                } else if (originalDict[key] !== d.place) {
-                    changed.push({
-                        old: {employee: d.employee, day: d.day, place: originalDict[key]},
-                        new: d
+                        this.classList.add('highlight');
                     });
-                }
-            });
-            
-            // Находим удаленные
-            original.duties.forEach(d => {
-                const key = `${d.employee}_${d.day}`;
-                if (!currentDict[key]) {
-                    removed.push(d);
-                }
-            });
-            
-            return { added, removed, changed };
-        }
-        
-        function sendDataToBot() {
-            const currentData = collectTableData();
-            const changes = findChanges(originalData, currentData);
-            
-            const dataToSend = {
-                schedule_id: config.scheduleId,
-                changes: changes,
-                full_data: currentData.duties
-            };
-            
-            console.log("Sending data:", dataToSend);
-            
-            if (window.Telegram && Telegram.WebApp) {
-                Telegram.WebApp.sendData(JSON.stringify(dataToSend));
-                Telegram.WebApp.close();
-            } else {
-                alert('Данные подготовлены для отправки:\n' + JSON.stringify(dataToSend, null, 2));
+                });
+                
+                // Улучшаем производительность прокрутки
+                document.querySelectorAll('.main-table td, .main-table th').forEach(el => {
+                    el.style.touchAction = 'manipulation';
+                    el.style.webkitBackfaceVisibility = 'hidden';
+                });
+                
+                // Принудительный рефреш после загрузки
+                setTimeout(() => {
+                    const container = document.querySelector('.table-container');
+                    container.style.overflow = 'hidden';
+                    setTimeout(() => {
+                        container.style.overflow = 'auto';
+                    }, 50);
+                }, 200);
+                
+                // Оптимизация для редактирования на мобильных
+                document.querySelectorAll('.editable-cell').forEach(cell => {
+                    cell.addEventListener('touchstart', function(e) {
+                        if (e.touches.length === 1) {
+                            this.focus();
+                            window.getSelection().selectAllChildren(this);
+                        }
+                    }, {passive: true});
+                });
             }
-        }
+        });
     </script>
 </body>
+
 </html>

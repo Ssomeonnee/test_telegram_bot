@@ -12,7 +12,7 @@
             touch-action: manipulation;
             -webkit-text-size-adjust: 100%;
         }
-        
+
         .header {
             background-color: #f8f9fa;
             padding: 10px;
@@ -23,7 +23,7 @@
             top: 0;
             z-index: 100;
         }
-        
+
         .save-btn {
             position: absolute;
             right: 10px;
@@ -36,14 +36,14 @@
             border-radius: 4px;
             cursor: pointer;
         }
-        
+
         .table-container {
             overflow: auto;
             height: calc(100vh - 100px);
             -webkit-overflow-scrolling: touch;
             background-color: white;
         }
-        
+
         .main-table {
             table-layout: fixed;
             width: auto;
@@ -51,7 +51,7 @@
             border-collapse: separate;
             border-spacing: 0;
         }
-        
+
         .main-table th,
         .main-table td {
             border: 1px solid #dee2e6 !important;
@@ -64,7 +64,7 @@
             background-color: white;
             position: relative;
         }
-        
+
         /* Закрепленный столбец с фамилиями */
         .main-table th:first-child,
         .main-table td:first-child {
@@ -77,13 +77,13 @@
             background-color: #f1f8ff;
             border-right: 2px solid #b3d1ff !important;
         }
-        
+
         /* Закрепленный заголовок первого столбца */
         .main-table th:first-child {
             z-index: 22;
             top: 0;
         }
-        
+
         /* Остальные ячейки */
         .main-table th:not(:first-child),
         .main-table td:not(:first-child) {
@@ -91,7 +91,7 @@
             min-width: 40px;
             max-width: 40px;
         }
-        
+
         /* Заголовки */
         .main-table th {
             background-color: #f8f9fa;
@@ -99,25 +99,39 @@
             top: 0;
             z-index: 20;
         }
-        
-        /* Hover эффект для строк */
+
+        /* Hover эффект для строк - переделан для мобильных */
+        .main-table tbody tr {
+            transition: background-color 0.1s;
+        }
+
+        .main-table tbody tr:hover td,
         .main-table tbody tr.highlight td {
             background-color: rgba(0, 0, 0, 0.05);
         }
+
+        .main-table tbody tr:hover td:first-child,
         .main-table tbody tr.highlight td:first-child {
             background-color: #e1f0ff;
         }
-        
+
+        /* Гарантируем отображение границ */
+        .main-table th:last-child,
+        .main-table td:last-child {
+            border-right: 1px solid #dee2e6 !important;
+        }
+
         /* Стиль для редактируемой ячейки */
         .editable-cell {
             cursor: pointer;
         }
+
         .editable-cell:focus {
             outline: 2px solid #0d6efd;
             background-color: #fff;
             z-index: 30;
         }
-        
+
         /* Для мобильных устройств */
         @media (max-width: 576px) {
             .main-table th,
@@ -125,24 +139,25 @@
                 font-size: 12px;
                 padding: 4px;
             }
-            
+
             .main-table th:not(:first-child),
             .main-table td:not(:first-child) {
                 width: 30px;
                 min-width: 30px;
                 max-width: 30px;
             }
-            
+
             .main-table th:first-child,
             .main-table td:first-child {
                 width: 80px;
                 min-width: 80px;
                 max-width: 80px;
             }
-            
-            .save-btn {
-                padding: 3px 6px;
-                font-size: 12px;
+
+            /* Улучшение для touch-устройств */
+            .main-table {
+                -webkit-transform: translate3d(0, 0, 0);
+                transform: translate3d(0, 0, 0);
             }
         }
     </style>
@@ -153,7 +168,7 @@
             <h5 class="m-0">График на <span id="month-year"></span></h5>
             <button class="save-btn" onclick="saveData()">💾 Сохранить</button>
         </div>
-        
+
         <div class="table-container">
             <table class="table main-table">
                 <thead>
@@ -168,107 +183,76 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ==================== КОНФИГУРАЦИЯ ====================
         const isTelegramWebApp = window.Telegram && window.Telegram.WebApp;
-        let scheduleData = null;
-        let originalData = null;
+        let scheduleId = null; // Store scheduleId
+        let month = null;
+        let year = null;
+        let daysInMonth = null;
+        let employees = null;
+        let initialData = null;
 
-        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
-        if (isTelegramWebApp) {
-            Telegram.WebApp.ready();
-            Telegram.WebApp.expand();
-            console.log('Telegram WebApp initialized');
-        }
+        document.addEventListener('DOMContentLoaded', function () {
+            // Get parameters from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            scheduleId = urlParams.get('schedule_id');
+            month = urlParams.get('month');
+            year = urlParams.get('year');
+            daysInMonth = parseInt(urlParams.get('days'));
+            employees = urlParams.get('employees').split(',');
 
-        // ==================== ПОЛУЧЕНИЕ ДАННЫХ ====================
-        function getDataFromURL() {
-            return new Promise((resolve, reject) => {
-                try {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const encodedData = urlParams.get('data');
-                    
-                    if (!encodedData) {
-                        reject('Данные графика не найдены в URL');
-                        return;
-                    }
-                    
-                    // Декодируем данные
-                    const decodedData = decodeURIComponent(escape(atob(encodedData)));
-                    const parsedData = JSON.parse(decodedData);
-                    
-                    resolve(parsedData);
-                } catch (error) {
-                    reject(`Ошибка обработки данных: ${error.message}`);
-                }
-            });
-        }
+            // Set the title
+            document.querySelector('.header h5').textContent = `График на ${month} ${year}`;
 
-        // ==================== СОЗДАНИЕ ТАБЛИЦЫ ====================
-        function createTable(data) {
-            // Обновляем заголовок
-            document.getElementById('month-year').textContent = `${data.month} ${data.year}`;
-            
-            // Создаем заголовок таблицы
-            const tableHeader = document.getElementById('table-header');
-            tableHeader.innerHTML = '<th>Фамилия</th>'; // Первый столбец
-            
-            // Добавляем заголовки дней
-            for (let day = 1; day <= data.days; day++) {
-                const th = document.createElement('th');
-                th.textContent = day.toString();
-                tableHeader.appendChild(th);
+            // Table Headers
+            const dayHeaders = ['Фамилия'];
+            for (let day = 1; day <= daysInMonth; day++) {
+                dayHeaders.push(day.toString());
             }
-            
-            // Создаем матрицу для хранения данных
-            const tableMatrix = Array(data.employees.length)
-                .fill()
-                .map(() => Array(data.days).fill(''));
-            
-            // Заполняем матрицу существующими дежурствами
-            data.duties.forEach(duty => {
-                const employeeIndex = data.employees.indexOf(duty.employee);
-                if (employeeIndex !== -1 && duty.day <= data.days) {
-                    tableMatrix[employeeIndex][duty.day - 1] = duty.place;
-                }
+
+            // Table configuration
+            const config = {
+                rowsCount: employees.length,
+                colsCount: daysInMonth,
+                fixedColumnData: employees,
+                mainHeaderData: dayHeaders
+            };
+
+            // Generate the table
+            const tableHeader = document.getElementById('table-header');
+            config.mainHeaderData.forEach(item => {
+                const th = document.createElement('th');
+                th.textContent = item;
+                tableHeader.appendChild(th);
             });
-            
-            // Заполняем таблицу
+
             const tableBody = document.getElementById('table-body');
-            tableBody.innerHTML = '';
-            
-            data.employees.forEach((employee, rowIndex) => {
+            for (let i = 0; i < config.rowsCount; i++) {
                 const row = document.createElement('tr');
-                
-                // Первая ячейка (фамилия)
                 const fixedTd = document.createElement('td');
-                fixedTd.textContent = employee;
+                fixedTd.textContent = config.fixedColumnData[i];
                 row.appendChild(fixedTd);
-                
-                // Остальные ячейки (дни месяца)
-                for (let day = 0; day < data.days; day++) {
+
+                for (let j = 1; j <= config.colsCount; j++) {
                     const td = document.createElement('td');
-                    td.textContent = tableMatrix[rowIndex][day];
+                    td.textContent = ''; // Default empty cells
                     td.classList.add('editable-cell');
                     td.setAttribute('contenteditable', 'true');
-                    td.setAttribute('data-employee', employee);
-                    td.setAttribute('data-day', day + 1);
+                    td.dataset.employeeIndex = i;
+                    td.dataset.day = j;
                     row.appendChild(td);
                 }
-                
                 tableBody.appendChild(row);
-            });
-            
-            // Добавляем обработчики событий
-            setupEventHandlers();
-        }
+            }
 
-        // ==================== ОБРАБОТЧИКИ СОБЫТИЙ ====================
-        function setupEventHandlers() {
-            // Обработка касания для мобильных устройств
+            // Load saved data and set initial data
+            loadScheduleData(scheduleId);
+
+            // Initializing touch effects
             if ('ontouchstart' in window) {
                 document.querySelectorAll('.main-table tr').forEach(row => {
-                    row.addEventListener('touchstart', function() {
+                    row.addEventListener('touchstart', function () {
                         document.querySelectorAll('.main-table tr').forEach(r => {
                             r.classList.remove('highlight');
                         });
@@ -276,205 +260,81 @@
                     });
                 });
             }
-            
-            // Предотвращаем масштабирование при двойном тапе
-            document.addEventListener('dblclick', function(e) {
-                if (e.target.classList.contains('editable-cell')) {
-                    e.preventDefault();
-                }
-            });
+        });
+
+        function loadScheduleData(scheduleId) {
+            const savedData = localStorage.getItem(`schedule_${scheduleId}`);
+            if (savedData) {
+                initialData = JSON.parse(savedData);
+                console.log('Data loaded from localstorage:', initialData);
+                applySavedDataToTable(initialData);
+            } else {
+                initialData = getDefaultScheduleData();
+                console.log('No data in localstorage, starting clean');
+            }
         }
 
-        // ==================== ПОЛУЧЕНИЕ ИЗМЕНЕНИЙ ====================
-        function getChanges() {
-            const changes = {
-                added: [],
-                removed: [],
-                changed: []
-            };
-            
-            const currentDuties = [];
-            
-            // Собираем текущие данные
-            document.querySelectorAll('.editable-cell').forEach(cell => {
-                const employee = cell.getAttribute('data-employee');
-                const day = parseInt(cell.getAttribute('data-day'));
-                const place = cell.textContent.trim();
-                
-                if (place) {
-                    currentDuties.push({ employee, day, place });
-                }
-            });
-            
-            // Сравниваем с оригинальными данными
-            const originalDutiesMap = new Map();
-            originalData.duties.forEach(duty => {
-                const key = `${duty.employee}-${duty.day}`;
-                originalDutiesMap.set(key, duty.place);
-            });
-            
-            const currentDutiesMap = new Map();
-            currentDuties.forEach(duty => {
-                const key = `${duty.employee}-${duty.day}`;
-                currentDutiesMap.set(key, duty.place);
-            });
-            
-            // Находим добавленные
-            currentDuties.forEach(duty => {
-                const key = `${duty.employee}-${duty.day}`;
-                if (!originalDutiesMap.has(key)) {
-                    changes.added.push(duty);
-                }
-            });
-            
-            // Находим удаленные
-            originalData.duties.forEach(duty => {
-                const key = `${duty.employee}-${duty.day}`;
-                if (!currentDutiesMap.has(key)) {
-                    changes.removed.push(duty);
-                }
-            });
-            
-            // Находим измененные
-            originalData.duties.forEach(duty => {
-                const key = `${duty.employee}-${duty.day}`;
-                if (currentDutiesMap.has(key) && currentDutiesMap.get(key) !== duty.place) {
-                    changes.changed.push({
-                        old: duty,
-                        new: {
-                            employee: duty.employee,
-                            day: duty.day,
-                            place: currentDutiesMap.get(key)
-                        }
-                    });
-                }
-            });
-            
-            return changes;
-        }
-
-        // ==================== ПОЛУЧЕНИЕ ВСЕХ ДАННЫХ ====================
-        function getFullTableData() {
-            const fullData = [];
-            
-            document.querySelectorAll('.editable-cell').forEach(cell => {
-                const employee = cell.getAttribute('data-employee');
-                const day = parseInt(cell.getAttribute('data-day'));
-                const place = cell.textContent.trim();
-                
-                if (place) {
-                    fullData.push({ employee, day, place });
-                }
-            });
-            
-            return fullData;
-        }
-
-        // ==================== ОТПРАВКА ДАННЫХ ====================
-        function sendDataToBot(data) {
-            return new Promise((resolve, reject) => {
-                if (isTelegramWebApp) {
-                    try {
-                        Telegram.WebApp.sendData(JSON.stringify(data));
-                        resolve('Данные отправлены через Telegram WebApp');
-                    } catch (error) {
-                        reject(`Ошибка отправки через Telegram: ${error.message}`);
+        function applySavedDataToTable(data) {
+            for (const duty of data) {
+                const employeeIndex = employees.indexOf(duty.employee);
+                const day = duty.day;
+                if (employeeIndex !== -1) {
+                    const cell = document.querySelector(`#table-body tr:nth-child(${employeeIndex + 1}) td[data-day="${day}"]`);
+                    if (cell) {
+                        cell.textContent = duty.place;
                     }
-                } else {
-                    // Альтернативный метод отправки (например, через fetch)
-                    copyToClipboard(JSON.stringify(data));
-                    resolve('Данные скопированы в буфер обмена');
                 }
+            }
+        }
+
+        function getDefaultScheduleData() {
+            let data = [];
+            document.querySelectorAll('#table-body tr').forEach(row => {
+                const employee = row.querySelector('td:first-child').textContent;
+                row.querySelectorAll('td.editable-cell').forEach(cell => {
+                    data.push({
+                        employee: employee,
+                        day: parseInt(cell.dataset.day),
+                        place: ''
+                    });
+                });
             });
+            return data;
         }
 
-        // ==================== КОПИРОВАНИЕ В БУФЕР ====================
-        function copyToClipboard(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
+        function saveData() {
+            let scheduleData = [];document.querySelectorAll('#table-body tr').forEach(row => {
+                const employee = row.querySelector('td:first-child').textContent;
+                row.querySelectorAll('td.editable-cell').forEach(cell => {
+                    if (cell.textContent.trim() !== '') {
+                        scheduleData.push({
+                            employee: employee,
+                            day: parseInt(cell.dataset.day),
+                            place: cell.textContent.trim()
+                        });
+                    }
+                });
+            });
+            localStorage.setItem(`schedule_${scheduleId}`, JSON.stringify(scheduleData));
+
+            // Format and send data
+            const dataToSend = {
+                schedule_id: scheduleId,
+                full_data: scheduleData
+            };
+            sendDataToBot(dataToSend);
+            console.log('Data sent to bot:', dataToSend);
         }
 
-        // ==================== УВЕДОМЛЕНИЯ ====================
-        function showNotification(message, isSuccess = true) {
-            const notification = document.createElement('div');
-            notification.style.position = 'fixed';
-            notification.style.top = '20px';
-            notification.style.right = '20px';
-            notification.style.background = isSuccess ? '#28a745' : '#dc3545';
-            notification.style.color = 'white';
-            notification.style.padding = '10px 15px';
-            notification.style.borderRadius = '5px';
-            notification.style.zIndex = '1000';
-            notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                if (document.body.contains(notification)) {
-                    document.body.removeChild(notification);
-                }
-            }, 3000);
-        }
-
-        // ==================== СОХРАНЕНИЕ ДАННЫХ ====================
-        async function saveData() {
-            try {
-                const changes = getChanges();
-                const fullData = getFullTableData();
-                
-                const dataToSend = {
-                    schedule_id: scheduleData.schedule_id,
-                    changes: changes,
-                    full_data: fullData,
-                    timestamp: new Date().toISOString()
-                };
-                
-                console.log('Данные для отправки:', dataToSend);
-                
-                const result = await sendDataToBot(dataToSend);
-                showNotification('✅ Данные успешно отправлены!');
-                
-                // Закрываем WebApp после успешной отправки
-                if (isTelegramWebApp) {
-                    setTimeout(() => {
-                        Telegram.WebApp.close();
-                    }, 1500);
-                }
-                
-            } catch (error) {
-                console.error('Ошибка сохранения:', error);
-                showNotification('❌ Ошибка отправки данных', false);
+        function sendDataToBot(data) {
+            if (isTelegramWebApp) {
+                Telegram.WebApp.sendData(JSON.stringify(data));
+                console.log('Data sent using Telegram WebApp');
+            } else {
+                console.log('Data to bot: ', data)
+                alert('Данные готовы для отправки боту (смотрите в консоли).');
             }
         }
-
-        // ==================== ЗАГРУЗКА ДАННЫХ ====================
-        async function loadData() {
-            try {
-                const data = await getDataFromURL();
-                scheduleData = data;
-                originalData = JSON.parse(JSON.stringify(data)); // Глубокая копия
-                
-                createTable(data);
-                showNotification('✅ Данные загружены успешно');
-                
-            } catch (error) {
-                console.error('Ошибка загрузки:', error);
-                showNotification('❌ Ошибка загрузки данных', false);
-                
-                // Создаем заглушку для отладки
-                document.getElementById('month-year').textContent = 'Ошибка загрузки';
-                document.getElementById('table-header').innerHTML = '<th>Ошибка</th>';
-                document.getElementById('table-body').innerHTML = '<tr><td>Проверьте URL</td></tr>';
-            }
-        }
-
-        // ==================== ЗАПУСК ПРИЛОЖЕНИЯ ====================
-        document.addEventListener('DOMContentLoaded', loadData);
     </script>
 </body>
 </html>

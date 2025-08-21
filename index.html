@@ -14,14 +14,11 @@
                 console.log("Telegram Web App is available!");
                 console.log("WebApp version:", Telegram.WebApp.version);
                 console.log("Platform:", Telegram.WebApp.platform);
+                console.log("InitData:", Telegram.WebApp.initData);
+                console.log("InitDataUnsafe:", Telegram.WebApp.initDataUnsafe);
                 
-                Telegram.WebApp.ready(); // Оповещаем Telegram, что Web App готов
-                Telegram.WebApp.expand(); // Разворачиваем на весь экран
-                
-                // Обработчик закрытия Web App
-                Telegram.WebApp.onEvent('viewportChanged', function(e) {
-                    console.log('Viewport changed:', e);
-                });
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand();
                 
             } else {
                 console.log("Telegram Web App is NOT available!");
@@ -30,12 +27,7 @@
                     WebApp: {
                         sendData: function(data) {
                             console.log("Simulated sendData:", data);
-                            // Симулируем закрытие Web App
-                            setTimeout(function() {
-                                if (confirm("Data sent. Close window?")) {
-                                    window.close();
-                                }
-                            }, 1000);
+                            alert("Data would be sent: " + data);
                         },
                         ready: function() { console.log("Simulated ready"); },
                         close: function() { console.log("Simulated close"); }
@@ -57,10 +49,10 @@
                     // Отправляем данные
                     Telegram.WebApp.sendData(JSON.stringify(data));
                     
-                    // Закрываем Web App после отправки
-                    setTimeout(function() {
-                        Telegram.WebApp.close();
-                    }, 500);
+                    console.log("Data sent successfully");
+                    
+                    // НЕ закрываем Web App сразу - пусть пользователь сам закроет
+                    // или закроется автоматически через некоторое время
                     
                 } else {
                     alert("Telegram Web App is NOT available!");

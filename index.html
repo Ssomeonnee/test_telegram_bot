@@ -3,103 +3,31 @@
 <head>
     <title>Telegram Web App Test</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        button { padding: 10px 20px; font-size: 16px; }
-        #status { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
-    </style>
 </head>
 <body>
     <h1>Telegram Web App Test</h1>
     <button onclick="sendData()">Send Data to Bot</button>
-    <div id="status">Status: Ready</div>
 
     <script>
         let tg = null;
 
-        // Инициализация Web App
         document.addEventListener('DOMContentLoaded', function() {
-            const statusDiv = document.getElementById('status');
-
             if (window.Telegram && window.Telegram.WebApp) {
                 tg = Telegram.WebApp;
-                statusDiv.innerHTML = 'Status: Telegram Web App available';
-                statusDiv.style.color = 'green';
-
-                alert("Telegram Web App initializedn" +
-                      "Version: " + tg.version + "n" +
-                      "Platform: " + tg.platform + "n" +
-                      "InitData: " + JSON.stringify(tg.initData) + "n" +
-                      "InitDataUnsafe: " + JSON.stringify(tg.initDataUnsafe));
-
                 tg.ready();
-                tg.expand();
-
-                // Добавляем обработчики событий
-                tg.onEvent('viewportChanged', function(e) {
-                    alert('Viewport changed: ' + JSON.stringify(e));
-                });
-
-                tg.onEvent('themeChanged', function() {
-                    alert('Theme changed');
-                });
-
             } else {
-                statusDiv.innerHTML = 'Status: NOT in Telegram environment';
-                statusDiv.style.color = 'red';
-
-                alert("Running outside Telegram - simulation mode");
-
-                // Симуляция для отладки
-                tg = {
-                    sendData: function(data) {
-                        alert("Simulated sendData: " + JSON.stringify(data));
-                        statusDiv.innerHTML = 'Status: Data sent (simulated)';
-                    },
-                    ready: function() { alert("Simulated ready"); },
-                    close: function() { alert("Simulated close"); },
-                    expand: function() { alert("Simulated expand"); }
-                };
+                alert("Telegram Web App is NOT available!");
             }
         });
 
         function sendData() {
-            const statusDiv = document.getElementById('status');
-
-            try {
-                if (tg && tg.sendData) {
-                    const data = {
-                        message: "Hello from Web App!",
-                        timestamp: new Date().toISOString(),
-                        user: tg.initDataUnsafe?.user?.username || 'unknown'
-                    };
-
-                    alert("Sending data: " + JSON.stringify(data));
-                    statusDiv.innerHTML = 'Status: Sending data...';
-
-                    tg.sendData(JSON.stringify(data))
-                        .then(() => {
-                            statusDiv.innerHTML = 'Status: Data sent successfully!';
-                            statusDiv.style.color = 'green';
-                            alert("Data sent successfully!");
-                        })
-                        .catch((error) => {
-                            statusDiv.innerHTML = 'Status: Error - ' + error.message;
-                            statusDiv.style.color = 'red';
-                            alert("Error sending data: " + error.message);
-                        });
-
-                } else {
-                    statusDiv.innerHTML = 'Status: Web App not available';
-                    statusDiv.style.color = 'red';
-                    alert("Telegram Web App is NOT available!");
-                }
-            } catch (error) {
-                alert("Error: " + error.message);
-                statusDiv.innerHTML = 'Status: Error - ' + error.message;
-                statusDiv.style.color = 'red';
+            if (tg && tg.sendData) {
+                tg.sendData(JSON.stringify({message: "test"}));
+            } else {
+                alert("Telegram Web App is NOT available!");
             }
         }
     </script>
 </body>
 </html>
+
